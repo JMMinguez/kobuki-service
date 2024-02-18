@@ -21,8 +21,9 @@
 #include "geometry_msgs/msg/transform_stamped.hpp"
 #include "tf2_ros/transform_listener.h"
 #include "tf2/transform_datatypes.h"
+
 #include "rclcpp_action/rclcpp_action.hpp"
-#include "service_forward_interfaces/srv/GetInformation.hpp"
+#include "service_forward_interfaces/srv/get_information.hpp"
 
 namespace service_forward
 {
@@ -31,9 +32,10 @@ class ServerNode : public rclcpp::Node
 {
 public:
   ServerNode();
-  void move_callback(const service_forward_interfaces::srv::GetInformation::Request::SharedPtr request,
+  void move_callback(
+    const service_forward_interfaces::srv::GetInformation::Request::SharedPtr request,
     service_forward_interfaces::srv::GetInformation::Response::SharedPtr response);
-  
+
 private:
   rclcpp::Service<service_forward_interfaces::srv::GetInformation>::SharedPtr server_;
 
@@ -41,10 +43,11 @@ private:
   geometry_msgs::msg::Twist l_vel_;
 
   tf2::BufferCore tf_buffer_;
+  tf2_ros::TransformListener tf_listener_;
 
   bool start_;
-  double actual_distance_;
-  
+  double actual_distance_, distance;
+
   const float MOVE_SPEED = 0.3;
   const float STOP_SPEED = 0.0;
 };

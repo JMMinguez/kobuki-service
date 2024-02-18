@@ -16,7 +16,7 @@
 #define SERVICE_FORWARD__CLIENTNODE_HPP_
 
 #include "rclcpp/rclcpp.hpp"
-#include "service_forward_interfaces/srv/GetInformation.hpp"
+#include "service_forward_interfaces/srv/get_information.hpp"
 
 namespace service_forward
 {
@@ -25,7 +25,9 @@ class ClientNode : public rclcpp::Node
 {
 public:
   ClientNode();
-  std::optional<service_forward_interfaces::srv::GetInformation::Response> call_client(double distance);
+  std::optional<service_forward_interfaces::srv::GetInformation::Response> call_client(
+    double distance);
+
 private:
   rclcpp::Client<service_forward_interfaces::srv::GetInformation>::SharedPtr client_;
 };

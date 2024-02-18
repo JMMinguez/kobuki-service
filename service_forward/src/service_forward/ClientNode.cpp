@@ -49,4 +49,5 @@ ClientNode::call_client(double distance)
 
   return *result.get();
 }
+
 }  //  namespace service_forward

@@ -14,13 +14,14 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/twist.hpp"
-#include "tf2_ros/transform_broadcaster.h"
 #include "geometry_msgs/msg/transform_stamped.hpp"
-#include "tf2_ros/transform_listener.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2/LinearMath/Transform.h"
 #include "tf2/transform_datatypes.h"
+#include "tf2_ros/transform_broadcaster.h"
 
 #include "service_forward/ServerNode.hpp"
-#include "service_forward_interfaces/srv/GetInformation.hpp"
+#include "service_forward_interfaces/srv/get_information.hpp"
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -29,7 +30,9 @@ namespace service_forward
 {
 
 ServerNode::ServerNode()
-: Node("my_server_node")
+: Node("my_server_node"),
+  tf_buffer_(),
+  tf_listener_(tf_buffer_)
 {
   server_ = create_service<service_forward_interfaces::srv::GetInformation>(
     "my_service",
@@ -51,10 +54,10 @@ ServerNode::move_callback(
 
   std::string error;
   tf2::Stamped<tf2::Transform> odom2bf;
-  if (start_){
+  if (start_) {
     if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
-    auto odom2bf_msg = tf_buffer_.lookupTransform(
-      "odom", "base_footprint", tf2::TimePointZero);
+      auto odom2bf_msg = tf_buffer_.lookupTransform(
+        "odom", "base_footprint", tf2::TimePointZero);
       tf2::fromMsg(odom2bf_msg, odom2bf);
     }
     actual_distance_ = 0.0;
@@ -64,36 +67,36 @@ ServerNode::move_callback(
   tf2::Transform odom2bf_inverse = odom2bf.inverse();
 
   tf2::Stamped<tf2::Transform> odom2bfa;
-  while (actual_distance_ < distance){
+  while (actual_distance_ < distance) {
     start_ = start_;
 
     // Gets the tf from start 'odom' and actual 'base_footprint'
     if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
-    auto odom2bfa_msg = tf_buffer_.lookupTransform(
-      "odom", "base_footprint", tf2::TimePointZero);
+      auto odom2bfa_msg = tf_buffer_.lookupTransform(
+        "odom", "base_footprint", tf2::TimePointZero);
+      tf2::fromMsg(odom2bfa_msg, odom2bfa);
 
-    tf2::fromMsg(odom2bfa_msg, odom2bfa);
+      // Gets the tf from start 'base_footprint' and actual 'base_footprint'
+      tf2::Transform bf2bfa = odom2bf_inverse * odom2bfa;
 
-    // Gets the tf from start 'base_footprint' and actual 'base_footprint'
-    tf2::Transform bf2bfa = odom2bf_inverse * odom2bfa;
-    
-    //  Extracts the x and y coordinates from the obtained transformation.
-    double x = bf2bfa.getOrigin().x();
-    double y = bf2bfa.getOrigin().y();
+      //  Extracts the x and y coordinates from the obtained transformation.
+      double x = bf2bfa.getOrigin().x();
+      double y = bf2bfa.getOrigin().y();
 
-    //  Calculate the distance between (0,0) and (x,y)
-    distance_ = sqrt(x * x + y * y);
+      //  Calculate the distance between (0,0) and (x,y)
+      actual_distance_ = sqrt(x * x + y * y);
+
+      // Move the robot
+      l_vel_.linear.x = MOVE_SPEED;
+      vel_->publish(l_vel_);
     }
-
-    // Move the robot
-    l_vel_.linear.x = MOVE_SPEED;
-    vel_->publish(l_vel_);
   }
 
   // When the distance is reached, the robot stops
   l_vel_.linear.x = STOP_SPEED;
   vel_->publish(l_vel_);
-  
+
   response->response = std_msgs::msg::Empty();
 }
-}
+
+}  //  namespace service_forward
