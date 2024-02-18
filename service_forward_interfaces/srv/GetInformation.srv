@@ -1,0 +1,3 @@
+float64 distance
+---
+std_msgs/Empty response
