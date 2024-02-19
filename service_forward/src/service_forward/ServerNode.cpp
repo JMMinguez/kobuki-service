@@ -5,7 +5,7 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
-//
+//En esta práctica, he utilizado como bsae el paquete [**ASR_2024**](https://github.com/Docencia-fmrico/ASR_2024) proporcionado por [fmrico](https://github.com/fmrico). 
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -116,6 +116,9 @@ ServerNode::move_forward()
       l_vel_.linear.x = STOP_SPEED;
       vel_->publish(l_vel_);
 
+      if (!check_distance()) {
+        go_state(FORWARD);
+      }
       break;
   }
 }
