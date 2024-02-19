@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <chrono>
+
+#include "service_forward/ServerNode.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
@@ -20,9 +23,9 @@
 #include "tf2/transform_datatypes.h"
 #include "tf2_ros/transform_broadcaster.h"
 
-#include "service_forward/ServerNode.hpp"
 #include "service_forward_interfaces/srv/get_information.hpp"
 
+using namespace std::chrono_literals;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
@@ -39,6 +42,10 @@ ServerNode::ServerNode()
     std::bind(&ServerNode::move_callback, this, _1, _2));
 
   vel_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+  timer_pos_check_ = create_wall_timer(
+    50ms, std::bind(&ServerNode::transform_callback, this));
+  timer_publish_ = create_wall_timer(
+    50ms, std::bind(&ServerNode::move_forward, this));
 }
 
 void
@@ -46,57 +53,85 @@ ServerNode::move_callback(
   const service_forward_interfaces::srv::GetInformation::Request::SharedPtr request,
   service_forward_interfaces::srv::GetInformation::Response::SharedPtr response)
 {
-  // If new message recieve before the previous distance is reached, the robot stops to calculate the tf correctly
-  l_vel_.linear.x = STOP_SPEED;
-  vel_->publish(l_vel_);
 
   RCLCPP_INFO(get_logger(), "Received advance command: '%f'", request->distance);
 
   std::string error;
-  tf2::Stamped<tf2::Transform> odom2bf;
   if (start_) {
     if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
       auto odom2bf_msg = tf_buffer_.lookupTransform(
         "odom", "base_footprint", tf2::TimePointZero);
-      tf2::fromMsg(odom2bf_msg, odom2bf);
+      tf2::fromMsg(odom2bf_msg, odom2bf_);
     }
-    actual_distance_ = 0.0;
-    start_ = !start_;
+
+    odom2bf_inverse = odom2bf_.inverse();
+    start_ = false;
   }
-
-  tf2::Transform odom2bf_inverse = odom2bf.inverse();
-
-  tf2::Stamped<tf2::Transform> odom2bfa;
-  while (actual_distance_ < distance) {
-    start_ = start_;
-
-    // Gets the tf from start 'odom' and actual 'base_footprint'
-    if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
-      auto odom2bfa_msg = tf_buffer_.lookupTransform(
-        "odom", "base_footprint", tf2::TimePointZero);
-      tf2::fromMsg(odom2bfa_msg, odom2bfa);
-
-      // Gets the tf from start 'base_footprint' and actual 'base_footprint'
-      tf2::Transform bf2bfa = odom2bf_inverse * odom2bfa;
-
-      //  Extracts the x and y coordinates from the obtained transformation.
-      double x = bf2bfa.getOrigin().x();
-      double y = bf2bfa.getOrigin().y();
-
-      //  Calculate the distance between (0,0) and (x,y)
-      actual_distance_ = sqrt(x * x + y * y);
-
-      // Move the robot
-      l_vel_.linear.x = MOVE_SPEED;
-      vel_->publish(l_vel_);
-    }
-  }
-
-  // When the distance is reached, the robot stops
-  l_vel_.linear.x = STOP_SPEED;
-  vel_->publish(l_vel_);
 
   response->response = std_msgs::msg::Empty();
+}
+
+void
+ServerNode::transform_callback()
+{
+  tf2::Stamped<tf2::Transform> odom2bfa;
+  std::string error;
+
+  // Gets the tf from start 'odom' and actual 'base_footprint'
+  if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
+    auto odom2bfa_msg = tf_buffer_.lookupTransform(
+      "odom", "base_footprint", tf2::TimePointZero);
+
+    tf2::fromMsg(odom2bfa_msg, odom2bfa);
+
+    // Gets the tf from start 'base_footprint' and actual 'base_footprint'
+    tf2::Transform bf2bfa = odom2bf_inverse * odom2bfa;
+
+    //  Extracts the x and y coordinates from the obtained transformation.
+    double x = bf2bfa.getOrigin().x();
+    double y = bf2bfa.getOrigin().y();
+
+    //  Calculate the distance between (0,0) and (x,y)
+    actual_distance_ = sqrt(x * x + y * y);
+  }
+}
+
+void
+ServerNode::move_forward()
+{
+  //  FSM
+  switch (state_) {
+    case FORWARD:
+      RCLCPP_INFO(get_logger(), "Moving forward!");
+      l_vel_.linear.x = MOVE_SPEED;
+      vel_->publish(l_vel_);
+
+      if (check_distance()) {
+        go_state(STOP);
+      }
+      break;
+
+    case STOP:
+      RCLCPP_INFO(get_logger(), "STOP!");
+      l_vel_.linear.x = STOP_SPEED;
+      vel_->publish(l_vel_);
+
+      break;
+  }
+}
+
+void
+ServerNode::go_state(int new_state)
+{
+  //  Change state
+  state_ = new_state;
+}
+
+bool
+ServerNode::check_distance()
+{
+  //  Check distance
+  return actual_distance_ >= distance;
 }
 
 }  //  namespace service_forward

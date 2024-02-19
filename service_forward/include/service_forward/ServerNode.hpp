@@ -35,21 +35,36 @@ public:
   void move_callback(
     const service_forward_interfaces::srv::GetInformation::Request::SharedPtr request,
     service_forward_interfaces::srv::GetInformation::Response::SharedPtr response);
+  double distance;
 
 private:
+  void transform_callback();
+  void move_forward();
+  void go_state(int new_state);
+  bool check_distance();
+
   rclcpp::Service<service_forward_interfaces::srv::GetInformation>::SharedPtr server_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr vel_;
   geometry_msgs::msg::Twist l_vel_;
 
+  rclcpp::TimerBase::SharedPtr timer_pos_check_;
+  rclcpp::TimerBase::SharedPtr timer_publish_;
+
   tf2::BufferCore tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
 
-  bool start_;
-  double actual_distance_, distance;
+  tf2::Stamped<tf2::Transform> odom2bf_;
+  tf2::Transform odom2bf_inverse;
+  bool start_ {true};
+  double actual_distance_;
 
   const float MOVE_SPEED = 0.3;
   const float STOP_SPEED = 0.0;
+
+  static const int FORWARD = 0;
+  static const int STOP = 1;
+  int state_;
 };
 
 }  //  namespace service_forward
