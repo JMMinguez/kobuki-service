@@ -87,6 +87,9 @@ ServerNode::transform_callback()
     // Gets the tf from start 'base_footprint' and actual 'base_footprint'
     tf2::Transform bf2bfa = odom2bf_inverse * odom2bfa;
 
+    std::cerr << "Original: \t" << odom2bf_.getOrigin().x() << " " << odom2bf_.getOrigin().y() << std::endl;
+    std::cerr << "New: \t" << odom2bfa.getOrigin().x() << " " << odom2bfa.getOrigin().y() << std::endl;
+    
     //  Extracts the x and y coordinates from the obtained transformation.
     double x = bf2bfa.getOrigin().x();
     double y = bf2bfa.getOrigin().y();
