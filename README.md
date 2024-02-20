@@ -56,6 +56,30 @@ switch (state_) {
       break;
 }
 ```
+## Launcher y ejecución
+Para ejecutar estos nodos he usado un launcher en el que al cliente le paso como parametros la distancia.
+```cpp
+client_node = Node(
+        package='service_forward',
+        executable='client',
+        arguments=['2'],
+        output='screen'
+    )
+```
+
+Tambien se puede ejecutar escribiendo en una terminal el server
+```shell
+ros2 run service_forward server 
+```
+
+Y en otra terminal el cliente con la distancia deseada
+```shell
+ros2 run service_forward client '[distancia]'
+```
+  
+## Video demostración
+[Grabación de pantalla desde 20-02-24 13:54:14.webm](https://github.com/Docencia-fmrico/2024-p4-serviceforward-jmartinm2021/assets/92941332/534170f8-ff8d-41e5-ae7d-14286a572684)  
+
 
 ## Enunciado
 En esta práctica debes crear 2 paquetes:
