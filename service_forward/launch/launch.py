@@ -16,8 +16,8 @@ from launch import LaunchDescription
 
 from launch_ros.actions import Node
 
-def generate_launch_description():
 
+def generate_launch_description():
 
     server_node = Node(
         package='service_forward',

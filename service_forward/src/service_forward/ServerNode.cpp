@@ -5,7 +5,7 @@
 // You may obtain a copy of the License at
 //
 //     http://www.apache.org/licenses/LICENSE-2.0
-//En esta práctica, he utilizado como bsae el paquete [**ASR_2024**](https://github.com/Docencia-fmrico/ASR_2024) proporcionado por [fmrico](https://github.com/fmrico). 
+//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,7 +36,7 @@ ServerNode::ServerNode()
 : Node("my_server_node"),
   tf_buffer_(),
   tf_listener_(tf_buffer_),
-  is_moving (true)
+  is_moving(true)
 {
   server_ = create_service<service_forward_interfaces::srv::GetInformation>(
     "my_service",
@@ -59,8 +59,8 @@ ServerNode::move_callback(
   distance = request->distance;
   std::cerr << "Distance_request: \t" << distance << std::endl;
   start_ = true;
-  
-  if (!is_moving){
+
+  if (!is_moving) {
     response->response = std_msgs::msg::Empty();
   }
 }
@@ -70,7 +70,7 @@ ServerNode::transform_callback()
 {
   tf2::Stamped<tf2::Transform> odom2bfa;
   std::string error;
-  
+
   if (start_) {
     if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
       auto odom2bf_msg = tf_buffer_.lookupTransform(
