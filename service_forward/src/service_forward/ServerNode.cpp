@@ -35,7 +35,8 @@ namespace service_forward
 ServerNode::ServerNode()
 : Node("my_server_node"),
   tf_buffer_(),
-  tf_listener_(tf_buffer_)
+  tf_listener_(tf_buffer_),
+  is_moving (true)
 {
   server_ = create_service<service_forward_interfaces::srv::GetInformation>(
     "my_service",
@@ -55,8 +56,21 @@ ServerNode::move_callback(
 {
 
   RCLCPP_INFO(get_logger(), "Received advance command: '%f'", request->distance);
+  distance = request->distance;
+  std::cerr << "Distance_request: \t" << distance << std::endl;
+  start_ = true;
+  
+  if (!is_moving){
+    response->response = std_msgs::msg::Empty();
+  }
+}
 
+void
+ServerNode::transform_callback()
+{
+  tf2::Stamped<tf2::Transform> odom2bfa;
   std::string error;
+  
   if (start_) {
     if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
       auto odom2bf_msg = tf_buffer_.lookupTransform(
@@ -67,16 +81,6 @@ ServerNode::move_callback(
     odom2bf_inverse = odom2bf_.inverse();
     start_ = false;
   }
-
-  response->response = std_msgs::msg::Empty();
-}
-
-void
-ServerNode::transform_callback()
-{
-  tf2::Stamped<tf2::Transform> odom2bfa;
-  std::string error;
-
   // Gets the tf from start 'odom' and actual 'base_footprint'
   if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
     auto odom2bfa_msg = tf_buffer_.lookupTransform(
@@ -87,9 +91,12 @@ ServerNode::transform_callback()
     // Gets the tf from start 'base_footprint' and actual 'base_footprint'
     tf2::Transform bf2bfa = odom2bf_inverse * odom2bfa;
 
-    std::cerr << "Original: \t" << odom2bf_.getOrigin().x() << " " << odom2bf_.getOrigin().y() << std::endl;
-    std::cerr << "New: \t" << odom2bfa.getOrigin().x() << " " << odom2bfa.getOrigin().y() << std::endl;
-    
+    std::cerr << "BF: \t" << odom2bf_.getOrigin().x() << " " << odom2bf_.getOrigin().y() <<
+      std::endl;
+    std::cerr << "BFa: \t" << odom2bfa.getOrigin().x() << " " << odom2bfa.getOrigin().y() <<
+      std::endl;
+    std::cerr << "TF: \t" << bf2bfa.getOrigin().x() << " " << bf2bfa.getOrigin().y() << std::endl;
+
     //  Extracts the x and y coordinates from the obtained transformation.
     double x = bf2bfa.getOrigin().x();
     double y = bf2bfa.getOrigin().y();
@@ -108,6 +115,7 @@ ServerNode::move_forward()
       RCLCPP_INFO(get_logger(), "Moving forward!");
       l_vel_.linear.x = MOVE_SPEED;
       vel_->publish(l_vel_);
+      is_moving = true;
 
       if (check_distance()) {
         go_state(STOP);
@@ -118,6 +126,7 @@ ServerNode::move_forward()
       RCLCPP_INFO(get_logger(), "STOP!");
       l_vel_.linear.x = STOP_SPEED;
       vel_->publish(l_vel_);
+      is_moving = false;
 
       if (!check_distance()) {
         go_state(FORWARD);

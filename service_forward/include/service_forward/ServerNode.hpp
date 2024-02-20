@@ -36,6 +36,7 @@ public:
     const service_forward_interfaces::srv::GetInformation::Request::SharedPtr request,
     service_forward_interfaces::srv::GetInformation::Response::SharedPtr response);
   double distance;
+  bool is_moving;
 
 private:
   void transform_callback();
@@ -56,7 +57,8 @@ private:
 
   tf2::Stamped<tf2::Transform> odom2bf_;
   tf2::Transform odom2bf_inverse;
-  bool start_ {true};
+
+  bool start_;
   double actual_distance_;
 
   const float MOVE_SPEED = 0.3;
