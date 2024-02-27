@@ -10,7 +10,11 @@ Esta práctica hace uso de 2 paquetes:
 
 ## Descripcion y procedimiento
 En esta práctica, he utilizado como base el paquete [**ASR_2024**](https://github.com/Docencia-fmrico/ASR_2024) proporcionado por [fmrico](https://github.com/fmrico). 
+  
+La idea inicial era usar una FSM tal que:
+![Diagrama sin título drawio](https://github.com/Docencia-fmrico/2024-p4-serviceforward-jmartinm2021/assets/92941332/852c7031-c877-42e5-83ef-3358e14b12fd)
 
+  
 En cuanto el servidor recibe el mensaje del cliente con una distancia, el servidor toma la posicion del robot.
 ```cpp
 if (tf_buffer_.canTransform("odom", "base_footprint", tf2::TimePointZero, &error)) {
